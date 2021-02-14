@@ -5,8 +5,6 @@ import com.villcore.rocksdb.redis.server.command.RedisResp;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,8 +20,20 @@ public class RedisCommandHandler extends SimpleChannelInboundHandler<ByteBuf[]> 
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf[] msg) throws Exception {
+        // invalid command
+        if (msg == null || msg.length == 0) {
+            ctx.writeAndFlush(RedisResp.invalidCommandRedisResp());
+            return;
+        }
+
         ByteBuf commandCode = msg[0];
         RedisCommand redisCommand = RedisCommand.getCommand(commandCode);
+        // unknown command
+        if (redisCommand == null) {
+            ctx.writeAndFlush(RedisResp.unknownCommandRedisResp());
+            return;
+        }
+
         log.info("Handle redis command code {}, current command {} ", commandCode.toString(StandardCharsets.UTF_8), redisCommand);
         RedisResp redisResp = redisCommand.handleCommand(msg);
         ctx.writeAndFlush(redisResp);

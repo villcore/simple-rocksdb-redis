@@ -2,6 +2,7 @@ package com.villcore.rocksdb.redis.server.codec;
 
 import com.villcore.rocksdb.redis.server.command.RedisCommand;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
@@ -29,15 +30,25 @@ public class RedisCommandDecoder extends ReplayingDecoder<Void> {
     private static final byte STATUS_PREFIX = '+';
     private static final byte ARRAY_PREFIX = '*';
 
+    private static final ByteBuf STRING_PREFIX_BYTE_BUF = Unpooled.wrappedBuffer(new byte[]{STRING_PREFIX});
+    private static final ByteBuf INTEGER_PREFIX_BYTE_BUF = Unpooled.wrappedBuffer(new byte[]{INTEGER_PREFIX});
+    private static final ByteBuf ERROR_PREFIX_BYTE_BUF = Unpooled.wrappedBuffer(new byte[]{ERROR_PREFIX});
+    private static final ByteBuf STATUS_PREFIX_BYTE_BUF = Unpooled.wrappedBuffer(new byte[]{STATUS_PREFIX});
+    private static final ByteBuf ARRAY_PREFIX_BYTE_BUF = Unpooled.wrappedBuffer(new byte[]{ARRAY_PREFIX});
+
     private static final byte CARRIAGE_RETURN = (byte) '\r';
     private static final byte LINE_FEED = (byte) '\n';
 
+    private static final ByteBuf CARRIAGE_RETURN_BYTE_BUF = Unpooled.wrappedBuffer(new byte[]{CARRIAGE_RETURN});
+    private static final ByteBuf LINE_FEED_BYTE_BUF = Unpooled.wrappedBuffer(new byte[]{LINE_FEED});
+
     private static final Logger log = LoggerFactory.getLogger(RedisCommandDecoder.class);
-    public static final Charset UTF_8 = StandardCharsets.UTF_8;
+    private static final Charset UTF_8 = StandardCharsets.UTF_8;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         out.add(decodeRedisCommand(in));
+        checkpoint();
     }
 
     private ByteBuf[] decodeRedisCommand(ByteBuf in) {
@@ -47,7 +58,6 @@ public class RedisCommandDecoder extends ReplayingDecoder<Void> {
         if (commandStartByte == ARRAY_PREFIX) {
             log.info("Array");
             int size = Integer.parseInt(line.toString(1, line.writerIndex() - 1, UTF_8));
-            checkpoint();
             return parseArray(in, size);
         } else if (commandStartByte == STRING_PREFIX) {
             log.info("String");
@@ -57,7 +67,6 @@ public class RedisCommandDecoder extends ReplayingDecoder<Void> {
                 strBuf = readLine(in);
                 log.info("String = {}", strBuf.toString(0, strBuf.writerIndex(), UTF_8));
             }
-            checkpoint();
             return new ByteBuf[]{strBuf};
         }
         return new ByteBuf[]{Unpooled.EMPTY_BUFFER};
@@ -108,5 +117,9 @@ public class RedisCommandDecoder extends ReplayingDecoder<Void> {
             byteBuf[i].retain();
         }
         return byteBuf;
+    }
+
+    public static ByteBuf[] errorResp(ByteBuf byteBuf) {
+        return new ByteBuf[]{ERROR_PREFIX_BYTE_BUF.retain(), byteBuf, CARRIAGE_RETURN_BYTE_BUF.retain(), LINE_FEED_BYTE_BUF.retain()};
     }
 }

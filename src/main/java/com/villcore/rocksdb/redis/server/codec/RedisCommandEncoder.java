@@ -13,7 +13,11 @@ public class RedisCommandEncoder extends MessageToByteEncoder<RedisResp> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, RedisResp redisResp, ByteBuf out) throws Exception {
-        out.writeBytes(redisResp.getResp()[0]);
-        log.info("Encode Ok");
+        StringBuilder sb = new StringBuilder();
+        for (ByteBuf byteBuf : redisResp.getResp()) {
+            out.writeBytes(byteBuf);
+//            sb.append(byteBuf.toString(byteBuf.readerIndex(), byteBuf.writerIndex(), StandardCharsets.UTF_8));
+        }
+        log.info("Encode redis command, byte buf size {}, content {}", redisResp.getResp().length, sb.toString());
     }
 }
