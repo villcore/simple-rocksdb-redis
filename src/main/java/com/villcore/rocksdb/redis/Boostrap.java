@@ -6,6 +6,8 @@ import com.villcore.rocksdb.redis.server.command.CommandInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
+
 public class Boostrap {
 
     private static final Logger log = LoggerFactory.getLogger(Boostrap.class);

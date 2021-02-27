@@ -1,8 +1,6 @@
 package com.villcore.rocksdb.redis.server;
 
 import com.villcore.rocksdb.redis.common.NamedThreadFactory;
-import com.villcore.rocksdb.redis.server.codec.RedisCommandDecoder;
-import com.villcore.rocksdb.redis.server.codec.RedisCommandEncoder;
 import com.villcore.rocksdb.redis.server.codec.RedisCommandHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -13,14 +11,17 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.codec.redis.RedisArrayAggregator;
+import io.netty.handler.codec.redis.RedisBulkStringAggregator;
+import io.netty.handler.codec.redis.RedisDecoder;
+import io.netty.handler.codec.redis.RedisEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Server {
 
     private static final Logger log = LoggerFactory.getLogger(Server.class);
+
     public static final int MAX_BUFFER_SIZE = 128 * 1024;
 
     private ServerConfig serverConfig;
@@ -67,15 +68,21 @@ public class Server {
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 .childOption(ChannelOption.SO_REUSEADDR, true)
-                .childHandler(new ChannelInitializer<NioSocketChannel>() {
-                    @Override
-                    protected void initChannel(NioSocketChannel ch) throws Exception {
-                        ch.pipeline()
-                                .addLast(new RedisCommandEncoder())
-                                .addLast(new RedisCommandDecoder())
-                                .addLast(new RedisCommandHandler());
-                    }
-                });
+                .childHandler(createChannelInitializer());
         serverSocketChannelFuture = serverBootstrap.bind(serverConfig.getPort()).syncUninterruptibly();
+    }
+
+    private ChannelInitializer<NioSocketChannel> createChannelInitializer() {
+        return new ChannelInitializer<NioSocketChannel>() {
+            @Override
+            protected void initChannel(NioSocketChannel ch) {
+                ch.pipeline()
+                        .addLast(new RedisEncoder())
+                        .addLast(new RedisDecoder(false))
+                        .addLast(new RedisBulkStringAggregator())
+                        .addLast(new RedisArrayAggregator())
+                        .addLast(new RedisCommandHandler());
+            }
+        };
     }
 }

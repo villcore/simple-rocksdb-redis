@@ -5,10 +5,14 @@ import com.villcore.rocksdb.redis.server.command.RedisResp;
 import com.villcore.rocksdb.redis.store.DataStore;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.redis.ErrorRedisMessage;
+import io.netty.handler.codec.redis.RedisMessage;
+import io.netty.handler.codec.redis.SimpleStringRedisMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 public class SetCommand extends RedisCommand {
 
@@ -24,9 +28,12 @@ public class SetCommand extends RedisCommand {
     }
 
     @Override
-    public RedisResp handleCommand(ByteBuf[] param) {
+    public RedisMessage handleCommand(List<RedisMessage> subList) {
+        if (subList == null || subList.size() != 2) {
+            return new ErrorRedisMessage("SET Command expected argument size is 2");
+        }
+
         log.info("Handle '{}' command ", getClass().getSimpleName());
-        ByteBuf byteBuf = Unpooled.copiedBuffer("+OK\r\n".getBytes(StandardCharsets.UTF_8));
-        return new RedisResp(new ByteBuf[]{byteBuf});
+        return new SimpleStringRedisMessage("OK");
     }
 }

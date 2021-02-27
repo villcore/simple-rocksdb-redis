@@ -3,8 +3,10 @@ package com.villcore.rocksdb.redis.server.command;
 import com.villcore.rocksdb.redis.store.DataStore;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.redis.RedisMessage;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -33,5 +35,5 @@ public abstract class RedisCommand {
 
     public abstract ByteBuf getCommandCode();
 
-    public abstract RedisResp handleCommand(ByteBuf[] param);
+    public abstract RedisMessage handleCommand(List<RedisMessage> subList);
 }
